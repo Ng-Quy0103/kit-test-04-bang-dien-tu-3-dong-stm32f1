@@ -1,0 +1,15 @@
+"E:\IAR\arm\bin\armproc.dll" 
+
+"E:\IAR\arm\bin\armstlink2.dll" 
+
+"E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\EWARM\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\Exe\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy.out" 
+
+--plugin="E:\IAR\arm\bin\armbat.dll" 
+
+--device_macro="E:\IAR\arm\config\debugger\ST\STM32F1xx.dmac" 
+
+--flash_loader="E:\IAR\arm\config\flashloader\ST\FlashSTM32F10xxC.board" 
+
+
+
+

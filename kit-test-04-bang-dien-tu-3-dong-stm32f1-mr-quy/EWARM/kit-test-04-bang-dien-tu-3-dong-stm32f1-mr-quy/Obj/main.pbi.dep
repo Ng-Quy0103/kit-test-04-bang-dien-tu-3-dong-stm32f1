@@ -1,4 +1,6 @@
 main.pbi: \
+  E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\Core\Src\led7seg.h \
+  E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\Core\Src\sensor.h \
   E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\Core\Src\Indicator.h \
   E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\EWARM\..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_pwr.h \
   E:\VNA\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy\EWARM\..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_flash_ex.h \

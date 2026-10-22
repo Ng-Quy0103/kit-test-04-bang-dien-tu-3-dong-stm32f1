@@ -1,71 +1,53 @@
 /* USER CODE BEGIN Header */
 /* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include "Indicator.h" 
-/* USER CODE END Includes */
+#include "sensor.h"
+#include "led7seg.h"
 
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-/* USER CODE END PTD */
+volatile uint32_t totalProducts = 0;
 
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-/* USER CODE BEGIN PFP */
-/* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-// ham quy chieu thoi gian 
 uint32_t millis() {
     return HAL_GetTick();
 }
 
-// Khai bao ten class 
 Indicator systemIndicator;
-/* USER CODE END 0 */
+sensor proximitysensor;
+Led7Seg myLed;
 
 int main(void)
 {
   HAL_Init();
   SystemClock_Config();
-  MX_GPIO_Init();
 
-  /* USER CODE BEGIN 2 */
-  // Chay ham cau hinh thanh ghi cua rieng ban
   systemIndicator.init();
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+  proximitysensor.init();
+  
+  // Khoi tao LED 
+  myLed.init(true); 
+  
+  // CHI XUAT DU LIEU DUNG 1 LAN O DAY ROI DE IC TU NHO, KHONG UPDATE LIEN TUC NUA
+  myLed.displayRows(22, 10, 2026); 
+  
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
     uint32_t current_time = millis();
-    
+
+    // Phan quet cam bien giu nguyen (khong block, hoat dong tron tru)
+    if (proximitysensor.update(current_time) == true) {
+        systemIndicator.triggerSingleBeep(current_time);
+        totalProducts = proximitysensor.getCount();
+        
+        // Sau nay neu muon dem san pham, ban chi can goi myLed.displayRows(totalProducts, 10, 2026) nam trong khoi IF nay
+    }
+
     systemIndicator.update(current_time);
   }
-  /* USER CODE END 3 */
 }
 
+// Cac ham he thong giu nguyen mac dinh 
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -96,30 +78,6 @@ void SystemClock_Config(void)
   }
 }
 
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  HAL_GPIO_WritePin(LED_MAIN_GPIO_Port, LED_MAIN_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
-
-  GPIO_InitStruct.Pin = LED_MAIN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_MAIN_GPIO_Port, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = BUZZER_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(BUZZER_GPIO_Port, &GPIO_InitStruct);
-}
-
 void Error_Handler(void)
 {
   __disable_irq();
@@ -132,4 +90,4 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
 }
-#endif /* USE_FULL_ASSERT */
+#endif

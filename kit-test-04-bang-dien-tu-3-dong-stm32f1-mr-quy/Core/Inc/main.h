@@ -57,6 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define Proximity_sensor_Pin GPIO_PIN_3
+#define Proximity_sensor_GPIO_Port GPIOC
 #define LED_MAIN_Pin GPIO_PIN_2
 #define LED_MAIN_GPIO_Port GPIOB
 #define BUZZER_Pin GPIO_PIN_2

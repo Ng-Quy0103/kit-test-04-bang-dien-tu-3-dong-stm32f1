@@ -1081,7 +1081,31 @@
                     <name>$PROJ_DIR$\..\Core\Src\Indicator.h</name>
                 </file>
                 <file>
+                    <name>$PROJ_DIR$\..\Core\Src\led7seg.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\led7seg.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\LedDisplay.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\LedDisplay.h</name>
+                </file>
+                <file>
                     <name>$PROJ_DIR$\..\Core\Src\main.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\ModuleRF.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\ModuleRF.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\sensor.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\sensor.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\Core\Src\stm32f1xx_hal_msp.c</name>

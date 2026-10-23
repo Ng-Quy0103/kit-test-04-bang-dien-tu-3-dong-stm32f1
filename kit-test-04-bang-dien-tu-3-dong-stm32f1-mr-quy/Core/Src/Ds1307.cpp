@@ -131,3 +131,35 @@ bool Ds1307::writeTime(const RtcTime& t) {
     stop();
     return ok;
 }
+
+// Doc 'len' byte tu bo nho RAM cua DS1307 (bat dau tu thanh ghi 0x08 + offset)
+bool Ds1307::readRam(uint8_t offset, uint8_t* data, uint8_t len) {
+    if (len == 0 || (uint16_t)offset + len > 56) return false;
+
+    start();
+    if (!writeByte(ADDR_WRITE))           { stop(); return false; }
+    if (!writeByte((uint8_t)(0x08 + offset))) { stop(); return false; }
+
+    start();
+    if (!writeByte(ADDR_READ))            { stop(); return false; }
+    for (uint8_t i = 0; i < len; i++) {
+        data[i] = readByte(i + 1 < len);  // byte cuoi cung gui NACK (false)
+    }
+    stop();
+    return true;
+}
+
+// Ghi 'len' byte vao bo nho RAM co pin nuoi cua DS1307 (bat dau tu thanh ghi 0x08 + offset)
+bool Ds1307::writeRam(uint8_t offset, const uint8_t* data, uint8_t len) {
+    if (len == 0 || (uint16_t)offset + len > 56) return false;
+
+    start();
+    if (!writeByte(ADDR_WRITE))           { stop(); return false; }
+    if (!writeByte((uint8_t)(0x08 + offset))) { stop(); return false; }
+    bool ok = true;
+    for (uint8_t i = 0; i < len; i++) {
+        ok &= writeByte(data[i]);
+    }
+    stop();
+    return ok;
+}

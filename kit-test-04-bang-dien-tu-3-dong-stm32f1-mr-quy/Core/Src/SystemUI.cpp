@@ -8,7 +8,7 @@ void SystemUI::init(Indicator* ind, uint32_t now) {
     indicator = ind;
     nowMs     = now;
 
-    // Gia tri mac dinh khi khoi dong
+    // Gia tri mac dinh khi khoi dong lan dau (neu chua co du lieu luu khi mat dien)
     targetDay = 1000;       // muc tieu ngay mac dinh = 1000
     count     = 0;          // san luong bat dau tu 0
     factor    = 1;          // moi lan cam bien thay san pham thi +1
@@ -16,25 +16,89 @@ void SystemUI::init(Indicator* ind, uint32_t now) {
     shiftStart[1] = 14 * 60;  shiftEnd[1] = 22 * 60;    // Ca 2: 14:00 - 22:00
     shiftStart[2] = 22 * 60;  shiftEnd[2] = 6 * 60;     // Ca 3: 22:00 - 06:00 (qua nua dem)
 
-    mode        = MODE_NORMAL;
-    clockValid  = false;
-    clock.hour = clock.minute = clock.second = 0;
-    clock.date = 1; clock.month = 1; clock.year = 0;
-    targetNow   = 0;
-    normalDirty = true;     // ve man hinh chinh ngay lan dau
-    dateKnown   = false;
-    lastDate    = 0;
-    cur         = 0;
-    testDigit   = 0;
-    testMs      = now;
+    mode         = MODE_NORMAL;
+    clockValid   = false;
+    clock.hour   = 0; clock.minute = 0; clock.second = 0;
+    clock.date   = 1; clock.month  = 1; clock.year   = 26;
+    targetNow    = 0;
+    normalDirty  = true;    // ve man hinh chinh ngay lan dau
+    dateKnown    = false;
+    lastDate     = 0;
+    flashPending = false;
+    lastChangeMs = now;
+    cur          = 0;
+    testDigit    = 0;
+    testMs       = now;
     for (uint8_t i = 0; i < MAX_EDIT_CELLS; i++) buf[i] = 0;
 
     disp.init();
     rf.init();
     rtc.init();
 
+    // Khoi phuc cac thong so cai dat va bo dem da luu truoc khi mat dien
+    loadSavedState();
+
     lastRtcMs = now;
-    readClock();            // doc gio lan dau
+    readClock();            // doc gio lan dau va kiem tra sang ngay moi
+}
+
+// Dong goi cac thong so hien tai vao cau truc SavedParams
+void SystemUI::packState(SavedParams& p) const {
+    p.magic      = FlashStorage::MAGIC_CODE;
+    p.targetDay  = targetDay;
+    p.count      = count;
+    p.factor     = factor;
+    p.reserved   = 0;
+    for (uint8_t i = 0; i < 3; i++) {
+        p.shiftStart[i] = shiftStart[i];
+        p.shiftEnd[i]   = shiftEnd[i];
+    }
+    p.lastDate   = lastDate;
+    p.checksum   = FlashStorage::calcChecksum(p);
+}
+
+// Khoi phuc cac thong so tu cau truc SavedParams hop le
+void SystemUI::unpackState(const SavedParams& p) {
+    targetDay = clampU32(p.targetDay, 0, MAX_VALUE);
+    count     = clampU32(p.count,     0, MAX_VALUE);
+    factor    = (uint16_t)clampU32(p.factor, 1, 999);
+    for (uint8_t i = 0; i < 3; i++) {
+        shiftStart[i] = (p.shiftStart[i] < 1440) ? p.shiftStart[i] : (uint16_t)(6 * 60);
+        shiftEnd[i]   = (p.shiftEnd[i]   < 1440) ? p.shiftEnd[i]   : (uint16_t)(14 * 60);
+    }
+    if (p.lastDate > 0) {
+        lastDate  = p.lastDate;
+        dateKnown = true;
+    }
+}
+
+// Doc du lieu luu tru khi moi cap dien: uu tien RAM co pin nuoi cua DS1307, sau do den Flash noi STM32
+void SystemUI::loadSavedState() {
+    SavedParams p;
+    if (rtc.readRam(0, (uint8_t*)&p, sizeof(SavedParams)) && FlashStorage::isValid(p)) {
+        unpackState(p);
+        return;
+    }
+    if (flash.load(p)) {
+        unpackState(p);
+        // Dong bo nguoc len RAM DS1307
+        rtc.writeRam(0, (const uint8_t*)&p, sizeof(SavedParams));
+    }
+}
+
+// Luu ngay vao RAM DS1307 (chong mat dien tuc thi) va luu vao Flash noi STM32
+void SystemUI::saveStateNow(bool writeFlash) {
+    SavedParams p;
+    packState(p);
+    rtc.writeRam(0, (const uint8_t*)&p, sizeof(SavedParams));
+
+    if (writeFlash) {
+        flash.save(p);
+        flashPending = false;
+    } else {
+        flashPending = true;
+        lastChangeMs = nowMs;
+    }
 }
 
 // Ham nay goi lien tuc trong while(1), KHONG chan, KHONG delay
@@ -60,18 +124,80 @@ void SystemUI::process(uint32_t now) {
         else                 disp.fillAll(testDigit, true);
     }
 
-    // 4. Man hinh chinh chi ve lai khi co thay doi
+    // 4. Neu co thay doi bo dem san pham, sau 2s ngung dem thi chot luon xuong Flash noi
+    if (flashPending && (uint32_t)(now - lastChangeMs) >= FLASH_SAVE_DELAY_MS) {
+        SavedParams p;
+        packState(p);
+        flash.save(p);
+        flashPending = false;
+    }
+
+    // 5. Man hinh chinh chi ve lai khi co thay doi
     if (mode == MODE_NORMAL && normalDirty) renderNormal();
 
-    // 5. Day du lieu ra LED
+    // 6. Day du lieu ra LED
     disp.process(now);
 }
 
-// Cam bien phat hien san pham: san luong tang them 'he so' (mac dinh = 1)
+// Cam bien phat hien san pham: san luong tang them 'he so' (mac dinh = 1) va luu lai ngay
 void SystemUI::onProduct() {
     count += factor;
     if (count > MAX_VALUE) count = MAX_VALUE;   // khong vuot qua 99999 (5 so LED)
     normalDirty = true;
+    saveStateNow(false);                        // ghi ngay vao RAM DS1307, cho 2s ghi Flash
+}
+
+// Cac ham cap nhat thong so tu Modbus RTU (Master ghi xuong mach)
+void SystemUI::setTargetDay(uint32_t v) {
+    targetDay = clampU32(v, 0, MAX_VALUE);
+    recalcTargetNow();
+    normalDirty = true;
+    saveStateNow(true);
+}
+
+void SystemUI::setCount(uint32_t v) {
+    count = clampU32(v, 0, MAX_VALUE);
+    normalDirty = true;
+    saveStateNow(true);
+}
+
+void SystemUI::setFactor(uint16_t v) {
+    factor = (uint16_t)clampU32(v, 1, 999);
+    saveStateNow(true);
+}
+
+void SystemUI::setShiftStart(uint8_t shift, uint16_t minutesFromMidnight) {
+    shiftStart[shift % 3] = (uint16_t)(minutesFromMidnight % 1440);
+    recalcTargetNow();
+    normalDirty = true;
+    saveStateNow(true);
+}
+
+void SystemUI::setShiftEnd(uint8_t shift, uint16_t minutesFromMidnight) {
+    shiftEnd[shift % 3] = (uint16_t)(minutesFromMidnight % 1440);
+    recalcTargetNow();
+    normalDirty = true;
+    saveStateNow(true);
+}
+
+bool SystemUI::setTime(const RtcTime& tIn) {
+    RtcTime t = tIn;
+    t.year   = (uint8_t)(t.year % 100);
+    t.month  = (uint8_t)clampU32(t.month, 1, 12);
+    t.date   = (uint8_t)clampU32(t.date, 1, daysInMonth(t.month, t.year));
+    t.hour   = (uint8_t)clampU32(t.hour, 0, 23);
+    t.minute = (uint8_t)clampU32(t.minute, 0, 59);
+    t.second = (uint8_t)clampU32(t.second, 0, 59);
+
+    if (!rtc.writeTime(t)) return false;
+    clock      = t;
+    clockValid = true;
+    dateKnown  = true;
+    lastDate   = (uint32_t)t.year * 10000UL + t.month * 100UL + t.date;
+    recalcTargetNow();
+    normalDirty = true;
+    saveStateNow(true);
+    return true;
 }
 
 void SystemUI::beep() {
@@ -147,8 +273,8 @@ void SystemUI::leaveMode(bool save) {
 
 // Ve man hinh chinh theo dung README.md:
 //   0 = Dong 1 (tren cung): Muc tieu can thuc hien duoc trong ngay hien tai (targetDay, mac dinh 1000)
-//   1 = Dong 2 (o giua):    Muc tieu tai thoi diem hien tai can dat duoc - cap nhat realtime tu DS1307 (targetNow, VD 331 -> 363)
-//   2 = Dong 3 (duoi cung): So luong san pham da san xuat duoc - tang +1 khi cam bien co tin hieu (count, VD 0 -> 1 -> 2 -> 3)
+//   1 = Dong 2 (o giua):    Muc tieu tai thoi diem hien tai can dat duoc - cap nhat realtime tu DS1307 (targetNow)
+//   2 = Dong 3 (duoi cung): So luong san pham da san xuat duoc - tang +1 khi cam bien co tin hieu (count)
 void SystemUI::renderNormal() {
     disp.clear();
     disp.setNumber(0, targetDay);   // Dong 1: Muc tieu ngay (1000)
@@ -166,19 +292,21 @@ void SystemUI::readClock() {
     recalcTargetNow();
 }
 
-// Phat hien sang ngay moi (nam/thang/ngay doi) thi reset san luong ve 0
+// Phat hien sang ngay moi (nam/thang/ngay doi) thi reset "San luong hien tai - Dong 3" ve 0 va luu lai
 void SystemUI::checkNewDay() {
     uint32_t today = (uint32_t)clock.year * 10000UL + clock.month * 100UL + clock.date;   // dang YYMMDD
     if (!dateKnown) {
-        // Lan doc dau tien: chi ghi nho ngay, chua reset
+        // Lan doc dau tien (khi chua co ngay luu trong Flash/RAM): ghi nho ngay hien tai va luu lai
         dateKnown = true;
         lastDate  = today;
+        saveStateNow(false);
         return;
     }
     if (today != lastDate) {
         lastDate    = today;
-        count       = 0;        // sang ngay moi: san luong ve 0
+        count       = 0;            // Sang ngay moi: Reset "San luong hien tai - Dong 3" ve 0
         normalDirty = true;
+        saveStateNow(true);         // Luu ngay trang thai moi xuong RAM DS1307 va Flash
     }
 }
 
@@ -314,7 +442,7 @@ void SystemUI::loadBuffer() {
     }
 }
 
-// Ghi gia tri nguoi dung vua nhap (trong buf[]) vao thong so that. Gia tri sai se duoc dua ve gioi han hop le
+// Ghi gia tri nguoi dung vua nhap (trong buf[]) vao thong so that va luu xuong Flash + RAM DS1307
 void SystemUI::applyBuffer() {
     switch (mode) {
     case MODE_SET_TIME: {
@@ -354,6 +482,7 @@ void SystemUI::applyBuffer() {
     default: break;
     }
     recalcTargetNow();      // thong so doi thi muc tieu hien tai co the doi
+    saveStateNow(true);     // luu ngay thong so moi vao RAM DS1307 va Flash noi STM32
 }
 
 // Ve man hinh cai dat: hien cac chu so trong buf[] len dung o LED + con tro nhap nhay

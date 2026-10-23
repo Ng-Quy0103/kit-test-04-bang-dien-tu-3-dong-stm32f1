@@ -28,6 +28,11 @@ public:
     bool readTime(RtcTime& t);          // false: DS1307 khong tra loi hoac du lieu sai
     bool writeTime(const RtcTime& t);   // false: DS1307 khong tra loi (NACK)
 
+    // Doc/ghi bo nho RAM co pin nuoi cua DS1307 (56 byte tu dia chi 0x08 den 0x3F)
+    // Dung de luu thong so va bo dem san pham khi mat dien dot ngot
+    bool readRam(uint8_t offset, uint8_t* data, uint8_t len);
+    bool writeRam(uint8_t offset, const uint8_t* data, uint8_t len);
+
 private:
     static const uint8_t ADDR_WRITE = 0xD0;
     static const uint8_t ADDR_READ  = 0xD1;

@@ -20,6 +20,7 @@ rule browsedata
 
 
 #Build steps
+build Ds1307.pbi : index Ds1307.xcl
 build Indicator.pbi : index Indicator.xcl
 build led7seg.pbi : index led7seg.xcl
 build LedDisplay.pbi : index LedDisplay.xcl
@@ -28,6 +29,7 @@ build ModuleRF.pbi : index ModuleRF.xcl
 build sensor.pbi : index sensor.xcl
 build stm32f1xx_hal_msp.pbi : index stm32f1xx_hal_msp.xcl
 build stm32f1xx_it.pbi : index stm32f1xx_it.xcl
+build SystemUI.pbi : index SystemUI.xcl
 build system_stm32f1xx.pbi : index system_stm32f1xx.xcl
 build stm32f1xx_hal.pbi : index stm32f1xx_hal.xcl
 build stm32f1xx_hal_cortex.pbi : index stm32f1xx_hal_cortex.xcl
@@ -40,11 +42,11 @@ build stm32f1xx_hal_gpio_ex.pbi : index stm32f1xx_hal_gpio_ex.xcl
 build stm32f1xx_hal_pwr.pbi : index stm32f1xx_hal_pwr.xcl
 build stm32f1xx_hal_rcc.pbi : index stm32f1xx_hal_rcc.xcl
 build stm32f1xx_hal_rcc_ex.pbi : index stm32f1xx_hal_rcc_ex.xcl
-build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part0.pbi : link Indicator.pbi led7seg.pbi LedDisplay.pbi main.pbi
-build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part1.pbi : link ModuleRF.pbi sensor.pbi stm32f1xx_hal_msp.pbi stm32f1xx_it.pbi
-build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part2.pbi : link system_stm32f1xx.pbi stm32f1xx_hal.pbi stm32f1xx_hal_cortex.pbi stm32f1xx_hal_dma.pbi
-build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part3.pbi : link stm32f1xx_hal_exti.pbi stm32f1xx_hal_flash.pbi stm32f1xx_hal_flash_ex.pbi stm32f1xx_hal_gpio.pbi
-build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part4.pbi : link stm32f1xx_hal_gpio_ex.pbi stm32f1xx_hal_pwr.pbi stm32f1xx_hal_rcc.pbi stm32f1xx_hal_rcc_ex.pbi
+build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part0.pbi : link Ds1307.pbi Indicator.pbi led7seg.pbi LedDisplay.pbi main.pbi
+build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part1.pbi : link ModuleRF.pbi sensor.pbi stm32f1xx_hal_msp.pbi stm32f1xx_it.pbi SystemUI.pbi
+build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part2.pbi : link system_stm32f1xx.pbi stm32f1xx_hal.pbi stm32f1xx_hal_cortex.pbi stm32f1xx_hal_dma.pbi stm32f1xx_hal_exti.pbi
+build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part3.pbi : link stm32f1xx_hal_flash.pbi stm32f1xx_hal_flash_ex.pbi stm32f1xx_hal_gpio.pbi stm32f1xx_hal_gpio_ex.pbi stm32f1xx_hal_pwr.pbi
+build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part4.pbi : link stm32f1xx_hal_rcc.pbi stm32f1xx_hal_rcc_ex.pbi
 build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy.pbd : link kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part0.pbi kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part1.pbi kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part2.pbi kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part3.pbi kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy_part4.pbi
 build kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy.pbw : browsedata kit-test-04-bang-dien-tu-3-dong-stm32f1-mr-quy.pbd
 

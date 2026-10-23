@@ -1102,6 +1102,18 @@
                     <name>$PROJ_DIR$\..\Core\Src\ModuleRF.h</name>
                 </file>
                 <file>
+                    <name>$PROJ_DIR$\..\Core\Src\SystemUI.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\SystemUI.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\Ds1307.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\Ds1307.h</name>
+                </file>
+                <file>
                     <name>$PROJ_DIR$\..\Core\Src\sensor.cpp</name>
                 </file>
                 <file>

@@ -1,84 +1,199 @@
 #include "led7seg.h"
 
-// Ma Hex cho Catot chung (Bit 7 DP = 0 de tat dau cham)
-const uint8_t Led7Seg::fontCathode[16] = {
-    0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 
-    0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71
+// Vi tri chan (Port C) - theo so do mach
+#define PIN_CK   10UL   // PC10: CLOCK
+#define PIN_ST   11UL   // PC11: STROBE / LATCH
+#define PIN_DT   12UL   // PC12: DATA
+
+// Thoi gian 1/2 chu ky xung CLOCK (us). 5us -> CLOCK ~100kHz: du cham de chay on dinh qua day cap
+#define HALF_PERIOD_US  5UL
+
+// Ma 7 doan cua tung so 0-9 (bit = 1 la sang). Gan bit -> doan theo mach cua kit:
+//   bit0 = c, bit1 = d, bit2 = e, bit3 = dau cham (dp)
+//   bit4 = b, bit5 = a, bit6 = f, bit7 = g
+
+const uint8_t Led7Seg::FONT[10] = {
+    0x77,   // 0
+    0x11,   // 1
+    0xB6,   // 2
+    0xB3,   // 3
+    0xD1,   // 4
+    0xE3,   // 5
+    0xE7,   // 6
+    0x31,   // 7
+    0xF7,   // 8
+    0xF3    // 9
 };
 
-// Ma Hex cho Anot chung (Bit 7 DP = 1 de tat dau cham)
-const uint8_t Led7Seg::fontAnode[16] = {
-    0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xF8, 
-    0x80, 0x90, 0x88, 0x83, 0xC6, 0xA1, 0x86, 0x8E
+// Neu mot con LED hien sai hinh (vi du so 1 bi hien o ben trai, so 7 bi lat) thi
+// module do dang bi noi nguoc 180 do -> dat true tai vi tri do [dong][cot].
+// Mac dinh tat ca = false.
+const bool Led7Seg::FLIP_MAP[Led7Seg::ROWS][Led7Seg::DIGITS] = {
+    { false, false, false, false, false },  // Dong 1
+    { false, false, false, false, false },  // Dong 2
+    { false, false, false, false, false }   // Dong 3
 };
 
-// Tao do tre doc bit de dam bao IC doi cu bat kip (100 chu ky NOP = khoang 1.4 us)
-void delay_nop() {
-    for(volatile int j = 0; j < 100; j++) {
-        __NOP();
-    }
+// Dao 180 do: a<->d, b<->e, c<->f; g va dp giu nguyen
+uint8_t Led7Seg::rotate180(uint8_t v) {
+    uint8_t r = v & 0x88;               // giu nguyen g (bit7) va dp (bit3)
+    if (v & 0x20) r |= 0x02;            // a (bit5) -> d (bit1)
+    if (v & 0x02) r |= 0x20;            // d (bit1) -> a (bit5)
+    if (v & 0x10) r |= 0x04;            // b (bit4) -> e (bit2)
+    if (v & 0x04) r |= 0x10;            // e (bit2) -> b (bit4)
+    if (v & 0x01) r |= 0x40;            // c (bit0) -> f (bit6)
+    if (v & 0x40) r |= 0x01;            // f (bit6) -> c (bit0)
+    return r;
 }
 
-void Led7Seg::init(bool cathodeMode) {
-    isCathode = cathodeMode;
+void Led7Seg::init() {
+    // Bat clock Port C (IOPCEN = bit 4 cua APB2ENR)
+    RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 
-    RCC->APB2ENR |= (1UL << 4);
-
-    // KET LIEU LOI 8.8.8.8 TAI DAY: 
-    // Dung cau hinh Output 2MHz (0x222) thay vi 50MHz (0x333) de triet tieu nhieu day cap
+    // PC10, PC11, PC12 -> Output push-pull 2MHz (CNF = 00, MODE = 10 -> 0x2 moi chan)
+    // PC10 -> CRH bit 8-11, PC11 -> bit 12-15, PC12 -> bit 16-19
     GPIOC->CRH &= ~(0xFFFUL << 8);
-    GPIOC->CRH |= (0x222UL << 8);
+    GPIOC->CRH |=  (0x222UL << 8);
 
-    // Xoa dien ap ve 0V ban dau
-    GPIOC->BRR = (1UL << PIN_STR_BIT) | (1UL << PIN_CLK_BIT) | (1UL << PIN_DATA_BIT);
+    // Trang thai nghi: CLOCK = 0, DATA = 0, STROBE = 1 (muc cao, chot bang suon len)
+    GPIOC->BSRR = (1UL << PIN_ST) | (1UL << (PIN_CK + 16)) | (1UL << (PIN_DT + 16));
+
+    // Bo dem chu ky CPU (DWT) dung de dinh thoi gian khong can delay
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    halfPeriodCycles = (SystemCoreClock / 1000000UL) * HALF_PERIOD_US;
+
+    for (uint8_t r = 0; r < ROWS; r++)
+        for (uint8_t c = 0; c < DIGITS; c++)
+            seg[r][c] = SEG_BLANK;
+
+    state     = ST_IDLE;
+    byteIdx   = 0;
+    bitIdx    = 0;
+    lastCycle = 0;
+    dirty     = true;   // day khung rong ra LED ngay lan process() dau tien
 }
 
-void Led7Seg::shiftOut(uint8_t data) {
-    for (int i = 0; i < 8; i++) {
-        // Chuan bi muc dien ap cho chan DATA 
-        if (data & (0x80 >> i)) {
-            GPIOC->BSRR = (1UL << PIN_DATA_BIT);
-        } else {
-            GPIOC->BRR = (1UL << PIN_DATA_BIT);
+void Led7Seg::setDigit(uint8_t row, uint8_t col, uint8_t digit) {
+    if (row >= ROWS || col >= DIGITS) return;
+    uint8_t base = (digit <= 9) ? FONT[digit] : SEG_BLANK;      // digit > 9 => o trong
+    uint8_t v = base | (seg[row][col] & SEG_DOT);               // giu nguyen dau cham
+    if (seg[row][col] != v) {
+        seg[row][col] = v;
+        dirty = true;
+    }
+}
+
+void Led7Seg::setDot(uint8_t row, uint8_t col, bool on) {
+    if (row >= ROWS || col >= DIGITS) return;
+    uint8_t v = on ? (seg[row][col] | SEG_DOT) : (seg[row][col] & (uint8_t)~SEG_DOT);
+    if (seg[row][col] != v) {
+        seg[row][col] = v;
+        dirty = true;
+    }
+}
+
+void Led7Seg::setNumber(uint8_t row, uint32_t value, bool leadingZero) {
+    if (row >= ROWS) return;
+
+    // Tach tung chu so tu phai sang trai (hang don vi o cot cuoi cung)
+    uint8_t digit[DIGITS];
+    for (int c = DIGITS - 1; c >= 0; c--) {
+        digit[c] = (uint8_t)(value % 10);
+        value /= 10;
+    }
+
+    bool show = leadingZero;
+    for (uint8_t c = 0; c < DIGITS; c++) {
+        // Bat dau hien thi tu so khac 0 dau tien; luon hien chu so cuoi cung (de hien so 0)
+        if (digit[c] != 0 || c == DIGITS - 1) show = true;
+
+        uint8_t v = show ? FONT[digit[c]] : SEG_BLANK;
+        v |= (seg[row][c] & SEG_DOT);   // giu nguyen dau cham dang co
+        if (seg[row][c] != v) {
+            seg[row][c] = v;
+            dirty = true;
         }
-        delay_nop(); 
-        
-        // Danh xung CLOCK de doc bit
-        GPIOC->BSRR = (1UL << PIN_CLK_BIT);
-        delay_nop(); 
-        
-        // Ha xung CLOCK xuong
-        GPIOC->BRR = (1UL << PIN_CLK_BIT);
-        delay_nop(); 
     }
 }
 
-void Led7Seg::displayRows(uint32_t row1, uint32_t row2, uint32_t row3) {
-    uint8_t digits[15];
-    uint32_t temp;
+void Led7Seg::clear() {
+    for (uint8_t r = 0; r < ROWS; r++) {
+        for (uint8_t c = 0; c < DIGITS; c++) {
+            if (seg[r][c] != SEG_BLANK) {
+                seg[r][c] = SEG_BLANK;
+                dirty = true;
+            }
+        }
+    }
+}
 
-    // Tach 5 so Hang 1
-    temp = row1;
-    for (int i = 4; i >= 0; i--) { digits[i] = temp % 10; temp /= 10; }
+// Xep du lieu theo thu tu day ra: byte gui DAU TIEN di xa nhat chuoi IC => nam o dong tren cung cua bang.
+// Thu tu gui: dong 1 -> dong 2 -> dong 3 (dong 1 = hang tren cung), trong moi dong gui cot 0 -> cot cuoi.
+// (Da kiem tra thuc te tren bang: neu gui nguoc dong 3 -> dong 1 thi bang bi dao cho dong 1 va dong 3.)
+void Led7Seg::buildFrame() {
+    uint8_t n = 0;
+    for (uint8_t r = 0; r < ROWS; r++) {
+        for (uint8_t c = 0; c < DIGITS; c++) {
+            uint8_t v = seg[r][c];
+            if (FLIP_MAP[r][c]) v = rotate180(v);
+            frame[n++] = v;
+        }
+    }
+}
 
-    // Tach 5 so Hang 2
-    temp = row2;
-    for (int i = 9; i >= 5; i--) { digits[i] = temp % 10; temp /= 10; }
+// May trang thai khong chan: moi lan goi chi lam toi da 1 buoc (1 thay doi muc chan),
+// va chi lam khi da du HALF_PERIOD_US ke tu buoc truoc.
+// Moi bit gom 2 buoc: SETUP (dat DATA, CLOCK=0) -> CLOCK (CLOCK=1). Cuoi cung: STROBE 1->0->1.
+void Led7Seg::process() {
+    uint32_t now = DWT->CYCCNT;
 
-    // Tach 5 so Hang 3
-    temp = row3;
-    for (int i = 14; i >= 10; i--) { digits[i] = temp % 10; temp /= 10; }
-
-    // Truyen 15 byte ra mach (Dich tu cuoi len dau cho chuoi daisy-chain)
-    for (int i = 14; i >= 0; i--) {
-        uint8_t num = digits[i];
-        uint8_t code = isCathode ? fontCathode[num] : fontAnode[num];
-        shiftOut(code);
+    if (state == ST_IDLE) {
+        if (!dirty) return;
+        buildFrame();
+        dirty     = false;
+        byteIdx   = 0;
+        bitIdx    = 0;
+        state     = ST_SETUP;
+        lastCycle = now - halfPeriodCycles;     // cho phep chay buoc dau tien ngay
     }
 
-    // Phat xung LATCH (Strobe) de hien thi toan bo hinh anh
-    GPIOC->BSRR = (1UL << PIN_STR_BIT);
-    delay_nop(); 
-    GPIOC->BRR = (1UL << PIN_STR_BIT);
-    delay_nop();
+    if ((uint32_t)(now - lastCycle) < halfPeriodCycles) return;
+    lastCycle = now;
+
+    switch (state) {
+    case ST_SETUP:
+        // Gui MSB truoc. Dat DATA va keo CLOCK xuong trong cung 1 lenh ghi BSRR
+        if (frame[byteIdx] & (0x80 >> bitIdx))
+            GPIOC->BSRR = (1UL << PIN_DT) | (1UL << (PIN_CK + 16));
+        else
+            GPIOC->BSRR = (1UL << (PIN_DT + 16)) | (1UL << (PIN_CK + 16));
+        state = ST_CLOCK;
+        break;
+
+    case ST_CLOCK:
+        GPIOC->BSRR = (1UL << PIN_CK);      // suon len: IC doc bit
+        if (++bitIdx >= 8) {
+            bitIdx = 0;
+            byteIdx++;
+        }
+        state = (byteIdx >= TOTAL_BYTES) ? ST_LATCH_LOW : ST_SETUP;
+        break;
+
+    case ST_LATCH_LOW:
+        GPIOC->BSRR = (1UL << (PIN_ST + 16));
+        state = ST_LATCH_HIGH;
+        break;
+
+    case ST_LATCH_HIGH:
+        // STROBE len cao: chot toan bo du lieu ra LED. Dua CLOCK, DATA ve 0 cho lan sau
+        GPIOC->BSRR = (1UL << PIN_ST) | (1UL << (PIN_CK + 16)) | (1UL << (PIN_DT + 16));
+        state = ST_IDLE;
+        break;
+
+    default:
+        state = ST_IDLE;
+        break;
+    }
 }

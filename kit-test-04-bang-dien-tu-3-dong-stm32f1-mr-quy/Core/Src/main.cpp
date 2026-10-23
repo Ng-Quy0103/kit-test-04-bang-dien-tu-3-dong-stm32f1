@@ -3,9 +3,7 @@
 #include "main.h"
 #include "Indicator.h" 
 #include "sensor.h"
-#include "led7seg.h"
-
-volatile uint32_t totalProducts = 0;
+#include "SystemUI.h"
 
 void SystemClock_Config(void);
 
@@ -15,7 +13,7 @@ uint32_t millis() {
 
 Indicator systemIndicator;
 sensor proximitysensor;
-Led7Seg myLed;
+SystemUI ui;        // man hinh chinh + cai dat bang remote RF (ben trong co LED 7 doan, RTC, RF)
 
 int main(void)
 {
@@ -24,30 +22,24 @@ int main(void)
 
   systemIndicator.init();
   proximitysensor.init();
-  
-  // Khoi tao LED 
-  myLed.init(true); 
-  
-  // CHI XUAT DU LIEU DUNG 1 LAN O DAY ROI DE IC TU NHO, KHONG UPDATE LIEN TUC NUA
-  myLed.displayRows(22, 10, 2026); 
-  
+
+  // Phai goi SAU SystemClock_Config vi can SystemCoreClock de tinh thoi gian
+  ui.init(&systemIndicator, millis());
+
   while (1)
   {
     uint32_t current_time = millis();
 
-    // Phan quet cam bien giu nguyen (khong block, hoat dong tron tru)
     if (proximitysensor.update(current_time) == true) {
         systemIndicator.triggerSingleBeep(current_time);
-        totalProducts = proximitysensor.getCount();
-        
-        // Sau nay neu muon dem san pham, ban chi can goi myLed.displayRows(totalProducts, 10, 2026) nam trong khoi IF nay
+        ui.onProduct();                     // cong them 'he so' vao san luong
     }
 
     systemIndicator.update(current_time);
+    ui.process(current_time);               // RF, RTC, man hinh LED (khong chan, khong delay)
   }
 }
-
-// Cac ham he thong giu nguyen mac dinh 
+// SystemClock_Config va Error_Handler giu nguyen
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -85,9 +77,3 @@ void Error_Handler(void)
   {
   }
 }
-
-#ifdef  USE_FULL_ASSERT
-void assert_failed(uint8_t *file, uint32_t line)
-{
-}
-#endif

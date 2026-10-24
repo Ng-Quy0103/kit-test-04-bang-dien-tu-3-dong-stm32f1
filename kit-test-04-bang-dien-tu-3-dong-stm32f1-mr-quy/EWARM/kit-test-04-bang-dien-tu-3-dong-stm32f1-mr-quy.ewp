@@ -1114,6 +1114,18 @@
                     <name>$PROJ_DIR$\..\Core\Src\Ds1307.h</name>
                 </file>
                 <file>
+                    <name>$PROJ_DIR$\..\Core\Src\FlashStorage.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\FlashStorage.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\ModbusRTU.cpp</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\Core\Src\ModbusRTU.h</name>
+                </file>
+                <file>
                     <name>$PROJ_DIR$\..\Core\Src\sensor.cpp</name>
                 </file>
                 <file>

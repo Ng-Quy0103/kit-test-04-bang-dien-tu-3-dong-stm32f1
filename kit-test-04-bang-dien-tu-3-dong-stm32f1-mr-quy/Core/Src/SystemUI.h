@@ -41,6 +41,7 @@ public:
     uint16_t getShiftStart(uint8_t shift) const { return shiftStart[shift % 3]; }   // phut tu 0h00 (0..1439)
     uint16_t getShiftEnd(uint8_t shift)   const { return shiftEnd[shift % 3]; }     // phut tu 0h00 (0..1439)
     const RtcTime& getClock() const { return clock; }
+    const RtcTime& getTime()  const { return clock; }
     bool     isClockValid() const { return clockValid; }
     bool     isNormalMode() const { return mode == MODE_NORMAL; }
 
@@ -51,6 +52,7 @@ public:
     void setShiftStart(uint8_t shift, uint16_t minutesFromMidnight);
     void setShiftEnd(uint8_t shift, uint16_t minutesFromMidnight);
     bool setTime(const RtcTime& t);
+    void beep();                        // keu coi 1 lan khi nhan lenh ghi tu Modbus hoac RF
 
 private:
     // Cac che do hoat dong cua giao dien
@@ -105,7 +107,6 @@ private:
     uint32_t testMs;                // moc thoi gian doi so trong che do test LED
 
     void handleKey(const RfEvent& ev);  // xu ly 1 su kien phim
-    void beep();                        // keu coi 1 lan
 
     void renderNormal();                // ve man hinh chinh
     void readClock();                   // doc DS1307 va cap nhat muc tieu hien tai

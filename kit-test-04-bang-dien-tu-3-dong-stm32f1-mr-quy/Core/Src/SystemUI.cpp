@@ -148,36 +148,38 @@ void SystemUI::onProduct() {
 }
 
 // Cac ham cap nhat thong so tu Modbus RTU (Master ghi xuong mach)
+// Su dung saveStateNow(false): luu ngay lap tuc vao RAM DS1307 va tu dong luu Flash sau 2s
+// de khong lam treo CPU (~20ms xoa Flash) truoc khi gui khung phan hoi Modbus ve PC
 void SystemUI::setTargetDay(uint32_t v) {
     targetDay = clampU32(v, 0, MAX_VALUE);
     recalcTargetNow();
     normalDirty = true;
-    saveStateNow(true);
+    saveStateNow(false);
 }
 
 void SystemUI::setCount(uint32_t v) {
     count = clampU32(v, 0, MAX_VALUE);
     normalDirty = true;
-    saveStateNow(true);
+    saveStateNow(false);
 }
 
 void SystemUI::setFactor(uint16_t v) {
     factor = (uint16_t)clampU32(v, 1, 999);
-    saveStateNow(true);
+    saveStateNow(false);
 }
 
 void SystemUI::setShiftStart(uint8_t shift, uint16_t minutesFromMidnight) {
     shiftStart[shift % 3] = (uint16_t)(minutesFromMidnight % 1440);
     recalcTargetNow();
     normalDirty = true;
-    saveStateNow(true);
+    saveStateNow(false);
 }
 
 void SystemUI::setShiftEnd(uint8_t shift, uint16_t minutesFromMidnight) {
     shiftEnd[shift % 3] = (uint16_t)(minutesFromMidnight % 1440);
     recalcTargetNow();
     normalDirty = true;
-    saveStateNow(true);
+    saveStateNow(false);
 }
 
 bool SystemUI::setTime(const RtcTime& tIn) {
@@ -196,7 +198,7 @@ bool SystemUI::setTime(const RtcTime& tIn) {
     lastDate   = (uint32_t)t.year * 10000UL + t.month * 100UL + t.date;
     recalcTargetNow();
     normalDirty = true;
-    saveStateNow(true);
+    saveStateNow(false);
     return true;
 }
 

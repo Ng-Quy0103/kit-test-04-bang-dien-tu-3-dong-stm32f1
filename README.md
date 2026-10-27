@@ -1,14 +1,7 @@
-# Kit test 04 - Bảng điện tử 3 dòng stm32f1
----
-_**ĐÂY LÀ BÀI TEST KỸ SƯ NHÚNG, HÃY LÀM ĐÚNG THỰC TẾ KHẢ NĂNG CỦA MÌNH, ĐỪNG SỬ DỤNG AI THAY NÃO CỦA MÌNH MÀ HÃY COI ĐÓ LÀ MỘT CÔNG CỤ HỖ TRỢ ĐỂ TĂNG TỐC NĂNG SUẤT.**_
-
----
-
 ## 1. MÔ TẢ
 Bài tập nhằm mục đích kiểm tra khả năng nghiên cứu và tích hợp các module cơ bản thành 01 project lớn hơn.
 
-## 2. PHẦN CỨNG CUNG CẤP
-Phần cứng liên hệ Mr Quảng để nhận trợ giúp.
+## 2. PHẦN CỨNG YÊU CẦU
 
 - 01 Mạch điều khiển + 01 mạch nạp
 - 01 bảng điện tử 3 dòng, mỗi dòng 4 số led
@@ -49,25 +42,7 @@ Phần cứng liên hệ Mr Quảng để nhận trợ giúp.
 - Những thông số cài đặt, bộ đếm cần được lưu lại khi mất điện đột ngột
 - Sang ngày mới thì "Sản lượng hiện tại - Dòng 3" cần được Reset về 0
 
-### Chú ý
-- Cần phải kiểm tra, đo đạc kỹ trước khi cắm điện để tránh trường hợp hỏng thiết bị, hỏng máy tính, cháy nổ, ...
-- Có vấn đề gì về phần cứng thì cần phải thông báo ngay cho quản lý.
-- Nếu có bất kỳ chỉnh sửa nào liên quan đến phần cứng thì cần phải liên hệ với quản lý để xác minh lại.
 
-## 5. LƯU Ý QUAN TRỌNG
 
-1. Nhân sự tạo 1 nhánh tên "dev" để lập trình và thực hiện dự án.
-2. Mỗi ngày cần UP **tất cả thay đổi** lên GIT **ít nhất 01 lần** kèm **commit** đầy đủ chi tiết.
-3. Những phần đã thực hiện, kể cả việc lỗi thì cần lưu lại bằng chứng hình ảnh/ video và UP vào thư mục **_logs_** trên git.
-4. Trước khi bắt tay vào code thì cần có **schematic** mới được phép cắm điện, nạp code.
-5. Cần phải tạo thêm các file **_*.md_** để lưu lại các tính năng thư viện mình viết (để sau này sử dụng lại cho dự án khác và để người khác có thể đọc, hiểu). Mỗi thư viện cần viết 01 file *.md để tái sử dụng. Nếu khi review mà không tự tạo được projec từ đầu và sử dụng các thư viện đó thì không tính hoàn thành thư viện đó.
-6. Tất cả kết quả lỗi đều cần phải lưu lại dưới dạng log, hình ảnh và commit lên GIT để đánh giá sự tiến bộ khi báo cáo kết quả cuối cùng
-7. Cần phải chuẩn hoá các hướng dẫn **_tạo project ban đầu_**, ví dụ như cài đặt phiên bản nào, cài đặt cái gì, có hình ảnh minh hoạ.
-8. Nghiêm cấm sử dụng code "rác" (những code mà mình không hiểu, không giải thích được)
 
-### LƯU Ý: nếu vi phạm bất kỳ bước nào trong 08 bước trên thì dự án được đánh giá là không đạt yêu cầu
 
-## 6. NGHIỆM THU
-- Thời gian làm bài: 02 tuần kể từ ngày nhận project.
-- Nhân sự cần hiểu được mình làm gì chứ không phải chỉ cần chạy được tính năng (được chứng minh bằng cách giải thích các dòng code, các tính năng mình viết). **Chạy được = 30%, hiểu mình đã làm cái gì = 70%.** Không chấp nhận vibe coding "chạy được mà không hiểu tại sao".
-- Sẽ kiểm tra code trực tiếp khi nhân sự báo cáo dự án, code 1 vài tính năng cơ bản.
